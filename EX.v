@@ -8,7 +8,7 @@ module EX(
 
     input wire [`ID_TO_EX_WD-1:0] id_to_ex_bus,
 
-    output wire [`EX_TO_MEM_WD-1:0] ex_to_mem_bus,
+    output wire [`EX_TO_DC_WD-1:0] ex_to_dc_bus,
 
     output wire [`EX_TO_RF_WD-1:0] ex_to_rf_bus,
 
@@ -260,7 +260,7 @@ module EX(
                      : inst_mfhi ? hi_i
                      : alu_result;
 
-    assign ex_to_mem_bus = {
+    assign ex_to_dc_bus = {
         mem_op,         // 150:143
         hilo_bus,       // 142:77
         ex_pc,          // 76:45

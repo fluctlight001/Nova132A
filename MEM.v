@@ -5,7 +5,7 @@ module MEM(
     // input wire flush,
     input wire [`StallBus-1:0] stall,
 
-    input wire [`EX_TO_MEM_WD-1:0] ex_to_mem_bus,
+    input wire [`DC_TO_MEM_WD-1:0] dc_to_mem_bus,
     input wire [31:0] data_sram_rdata,
 
     output wire [`MEM_TO_WB_WD-1:0] mem_to_wb_bus,
@@ -13,20 +13,24 @@ module MEM(
     output wire [`MEM_TO_RF_WD-1:0] mem_to_rf_bus
 );
 
-    reg [`EX_TO_MEM_WD-1:0] ex_to_mem_bus_r;
+    reg [`DC_TO_MEM_WD-1:0] dc_to_mem_bus_r;
+    reg [31:0] data_sram_rdata_r;
 
     always @ (posedge clk) begin
         if (rst) begin
-            ex_to_mem_bus_r <= `EX_TO_MEM_WD'b0;
+            dc_to_mem_bus_r <= `DC_TO_MEM_WD'b0;
+            data_sram_rdata_r <= 32'b0;
         end
         // else if (flush) begin
-        //     ex_to_mem_bus_r <= `EX_TO_MEM_WD'b0;
+        //     dc_to_mem_bus_r <= `DC_TO_MEM_WD'b0;
         // end
         else if (stall[3]==`Stop && stall[4]==`NoStop) begin
-            ex_to_mem_bus_r <= `EX_TO_MEM_WD'b0;
+            dc_to_mem_bus_r <= `DC_TO_MEM_WD'b0;
+            data_sram_rdata_r <= 32'b0;
         end
         else if (stall[3]==`NoStop) begin
-            ex_to_mem_bus_r <= ex_to_mem_bus;
+            dc_to_mem_bus_r <= dc_to_mem_bus;
+            data_sram_rdata_r <= data_sram_rdata;
         end
     end
 
@@ -54,7 +58,7 @@ module MEM(
         rf_we,          // 37
         rf_waddr,       // 36:32
         ex_result       // 31:0
-    } =  ex_to_mem_bus_r;
+    } =  dc_to_mem_bus_r;
 
 
 
@@ -70,13 +74,13 @@ module MEM(
     wire [15:0] h_data;
     wire [31:0] w_data;
 
-    assign b_data = data_ram_sel[3] ? data_sram_rdata[31:24] : 
-                    data_ram_sel[2] ? data_sram_rdata[23:16] :
-                    data_ram_sel[1] ? data_sram_rdata[15: 8] : 
-                    data_ram_sel[0] ? data_sram_rdata[ 7: 0] : 8'b0;
-    assign h_data = data_ram_sel[2] ? data_sram_rdata[31:16] :
-                    data_ram_sel[0] ? data_sram_rdata[15: 0] : 16'b0;
-    assign w_data = data_sram_rdata;
+    assign b_data = data_ram_sel[3] ? data_sram_rdata_r[31:24] : 
+                    data_ram_sel[2] ? data_sram_rdata_r[23:16] :
+                    data_ram_sel[1] ? data_sram_rdata_r[15: 8] : 
+                    data_ram_sel[0] ? data_sram_rdata_r[ 7: 0] : 8'b0;
+    assign h_data = data_ram_sel[2] ? data_sram_rdata_r[31:16] :
+                    data_ram_sel[0] ? data_sram_rdata_r[15: 0] : 16'b0;
+    assign w_data = data_sram_rdata_r;
 
     assign mem_result = inst_lb     ? {{24{b_data[7]}},b_data} :
                         inst_lbu    ? {{24{1'b0}},b_data} :
