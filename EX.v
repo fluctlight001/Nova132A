@@ -27,10 +27,10 @@ module EX(
         // else if (flush) begin
         //     id_to_ex_bus_r <= `ID_TO_EX_WD'b0;
         // end
-        else if (stall[2]==`Stop && stall[3]==`NoStop) begin
+        else if (stall[3]==`Stop && stall[4]==`NoStop) begin
             id_to_ex_bus_r <= `ID_TO_EX_WD'b0;
         end
-        else if (stall[2]==`NoStop) begin
+        else if (stall[3]==`NoStop) begin
             id_to_ex_bus_r <= id_to_ex_bus;
         end
     end
@@ -142,15 +142,47 @@ module EX(
     	.clk        (clk            ),
         .resetn     (~rst           ),
         .mul_signed (inst_mult      ),
-        .ina        (rf_rdata1      ),
-        .inb        (rf_rdata2      ),
+        .ina        (op_mul ? rf_rdata1 : 32'b0),
+        .inb        (op_mul ? rf_rdata2 : 32'b0),
         .result     (mul_result     )
     );
+
+    reg cnt;
+    reg next_cnt;
+    reg stallreq_for_mul;
+    
+    always @ (posedge clk) begin
+        if (rst) begin
+           cnt <= 1'b0; 
+        end
+        else begin
+           cnt <= next_cnt; 
+        end
+    end
+
+    always @ (*) begin
+        if (rst) begin
+            stallreq_for_mul <= 1'b0;
+            next_cnt <= 1'b0;
+        end
+        else if((inst_mult|inst_multu)&~cnt) begin
+            stallreq_for_mul <= 1'b1;
+            next_cnt <= 1'b1;
+        end
+        else if((inst_mult|inst_multu)&cnt) begin
+            stallreq_for_mul <= 1'b0;
+            next_cnt <= 1'b0;
+        end
+        else begin
+           stallreq_for_mul <= 1'b0;
+           next_cnt <= 1'b0; 
+        end
+    end
 
     // DIV part
     wire div_ready_i;
     reg stallreq_for_div;
-    assign stallreq_for_ex = stallreq_for_div;
+    
 
     reg [31:0] div_opdata1_o;
     reg [31:0] div_opdata2_o;
@@ -252,6 +284,7 @@ module EX(
         lo_we, lo_o
     };
 
+    assign stallreq_for_ex = stallreq_for_div | stallreq_for_mul;
 
 
 // output
@@ -260,7 +293,11 @@ module EX(
                      : inst_mfhi ? hi_i
                      : alu_result;
 
+    wire ex_is_load;
+    assign ex_is_load = inst_lw | inst_lh | inst_lhu | inst_lb | inst_lbu;
+
     assign ex_to_dc_bus = {
+        ex_is_load,     // 151
         mem_op,         // 150:143
         hilo_bus,       // 142:77
         ex_pc,          // 76:45
@@ -274,14 +311,13 @@ module EX(
     };
 
     assign ex_to_rf_bus = {
+        ex_is_load,
         hilo_bus,
         rf_we,
         rf_waddr,
         ex_result
     };
-    
-    
-    
+
 endmodule
 
 

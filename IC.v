@@ -23,10 +23,10 @@ module IC (
         if (rst) begin
             if_to_ic_bus_r <= `IF_TO_IC_WD'b0;
         end
-        else if (br_e) begin
+        else if (stall[1]==`Stop && stall[2]==`NoStop) begin
             if_to_ic_bus_r <= `IF_TO_IC_WD'b0;
         end
-        else if (stall[1]==`Stop && stall[2]==`NoStop) begin
+        else if (stall[1]==`NoStop && br_e) begin
             if_to_ic_bus_r <= `IF_TO_IC_WD'b0;
         end
         else if (stall[1]==`NoStop) begin
