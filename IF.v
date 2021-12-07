@@ -9,7 +9,7 @@ module IF(
 
     input wire [`BR_WD-1:0] br_bus,
 
-    output wire [`IF_TO_ID_WD-1:0] if_to_id_bus,
+    output wire [`IF_TO_IC_WD-1:0] if_to_ic_bus,
 
     output wire inst_sram_en,
     output wire [3:0] inst_sram_wen,
@@ -55,7 +55,7 @@ module IF(
     assign inst_sram_wen = 4'b0;
     assign inst_sram_addr = pc_reg;
     assign inst_sram_wdata = 32'b0;
-    assign if_to_id_bus = {
+    assign if_to_ic_bus = {
         ce_reg,
         pc_reg
     };
