@@ -8,14 +8,9 @@ module EX(
 
     input wire [`ID_TO_EX_WD-1:0] id_to_ex_bus,
 
-    output wire [`EX_TO_DC_WD-1:0] ex_to_dc_bus,
+    output wire [`EX_TO_DF_WD-1:0] ex_to_df_bus,
 
-    output wire [`EX_TO_RF_WD-1:0] ex_to_rf_bus,
-
-    output wire data_sram_en,
-    output wire [3:0] data_sram_wen,
-    output wire [31:0] data_sram_addr,
-    output wire [31:0] data_sram_wdata
+    output wire [`EX_TO_RF_WD-1:0] ex_to_rf_bus 
 );
 
     reg [`ID_TO_EX_WD-1:0] id_to_ex_bus_r;
@@ -112,12 +107,25 @@ module EX(
                           inst_sh | inst_lh | inst_lhu ? {{2{byte_sel[2]}},{2{byte_sel[0]}}} :
                           inst_sw | inst_lw ? 4'b1111 : 4'b0000;
 
+    wire data_sram_en;
+    wire [3:0] data_sram_wen;
+    wire [31:0] data_sram_addr;
+    wire [31:0] data_sram_wdata;
+
     assign data_sram_en     = data_ram_en;
     assign data_sram_wen    = {4{data_ram_wen}}&data_ram_sel;
     assign data_sram_addr   = alu_result;
     assign data_sram_wdata  = inst_sb ? {4{rf_rdata2[7:0]}} :
                               inst_sh ? {2{rf_rdata2[15:0]}} :
                             /*inst_sw*/ rf_rdata2;
+
+    wire [`SRAM_WD-1:0] data_sram_ctl;
+    assign data_sram_ctl = {
+        data_sram_en,
+        data_sram_wen, 
+        data_sram_addr,
+        data_sram_wdata
+    };
 
 // mul & div
     wire inst_mfhi, inst_mflo,  inst_mthi,  inst_mtlo;
@@ -296,7 +304,8 @@ module EX(
     wire ex_is_load;
     assign ex_is_load = inst_lw | inst_lh | inst_lhu | inst_lb | inst_lbu;
 
-    assign ex_to_dc_bus = {
+    assign ex_to_df_bus = {
+        data_sram_ctl,
         ex_is_load,     // 151
         mem_op,         // 150:143
         hilo_bus,       // 142:77
