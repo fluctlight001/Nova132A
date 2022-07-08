@@ -45,8 +45,10 @@ module EX(
     wire [31:0] hi_i, lo_i;
     wire [7:0] hilo_op;
     wire [7:0] mem_op;
+    wire inst_mul;
 
     assign {
+        inst_mul,       // 236
         mem_op,         // 235:228
         hilo_op,        // 227:220
         hi_i, lo_i,     // 219:156
@@ -142,14 +144,14 @@ module EX(
         inst_mult, inst_multu, inst_div, inst_divu
     } = hilo_op;
 
-    assign op_mul = inst_mult | inst_multu;
+    assign op_mul = inst_mult | inst_multu | inst_mul;
     assign op_div = inst_div | inst_divu;
 
     // MUL part
     mul u_mul(
     	.clk        (clk            ),
         .resetn     (~rst           ),
-        .mul_signed (inst_mult      ),
+        .mul_signed (inst_mult | inst_mul      ),
         .ina        (op_mul ? rf_rdata1 : 32'b0),
         .inb        (op_mul ? rf_rdata2 : 32'b0),
         .result     (mul_result     )
@@ -173,11 +175,11 @@ module EX(
             stallreq_for_mul <= 1'b0;
             next_cnt <= 1'b0;
         end
-        else if((inst_mult|inst_multu)&~cnt) begin
+        else if(op_mul&~cnt) begin
             stallreq_for_mul <= 1'b1;
             next_cnt <= 1'b1;
         end
-        else if((inst_mult|inst_multu)&cnt) begin
+        else if(op_mul&cnt) begin
             stallreq_for_mul <= 1'b0;
             next_cnt <= 1'b0;
         end
@@ -299,10 +301,11 @@ module EX(
 
     assign ex_result = inst_mflo ? lo_i 
                      : inst_mfhi ? hi_i
+                     : inst_mul ? mul_result[31:0]
                      : alu_result;
 
     wire ex_is_load;
-    assign ex_is_load = inst_lw | inst_lh | inst_lhu | inst_lb | inst_lbu;
+    assign ex_is_load = inst_lw | inst_lh | inst_lhu | inst_lb | inst_lbu | inst_sw | inst_sh | inst_sb;
 
     assign ex_to_df_bus = {
         data_sram_ctl,

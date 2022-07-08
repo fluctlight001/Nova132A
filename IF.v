@@ -30,7 +30,7 @@ module IF(
 
     always @ (posedge clk) begin
         if (rst) begin
-            pc_reg <= 32'hbfbf_fffc;
+            pc_reg <= 32'h7fff_fffc;
         end
         else if (stall[0]==`NoStop) begin
             pc_reg <= next_pc;
